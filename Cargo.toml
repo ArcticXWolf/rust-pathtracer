@@ -1,0 +1,10 @@
+[package]
+name = "pathtracer"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jan Niklas Richter"]
+
+[dependencies]
+clap = { version = "4.1.4", features = ["derive"] }
+png = "0.17.7"
+rand = "0.8.5"

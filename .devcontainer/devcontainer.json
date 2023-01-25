@@ -1,0 +1,44 @@
+{
+    "name": "rust-devcontainer",
+    "image": "mcr.microsoft.com/devcontainers/rust:latest",
+    "postCreateCommand": "rustc --version",
+    "remoteUser": "vscode",
+    "mounts": [
+        "source=${localEnv:HOME}${localEnv:USERPROFILE}/.config/.adventofcode.session,target=/home/vscode/.adventofcode.session,type=bind,consistency=cached"
+    ],
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:1": {
+            "installZsh": "true",
+            "username": "vscode",
+            "uid": "1000",
+            "gid": "1000",
+            "upgradePackages": "true"
+        },
+        "ghcr.io/devcontainers/features/rust:1": "latest",
+		"ghcr.io/devcontainers/features/git:1": {
+            "version": "latest",
+            "ppa": "false"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            // Set *default* container specific settings.json values on container create.
+            "settings": {
+                "lldb.executable": "/usr/bin/lldb",
+                // VS Code don't watch files under ./target
+                "files.watcherExclude": {
+                    "**/target/**": true
+                },
+                "rust-analyzer.checkOnSave.command": "clippy"
+            },
+            // Add the IDs of extensions you want installed when the container is created.
+            "extensions": [
+                "vadimcn.vscode-lldb",
+                "mutantdino.resourcemonitor",
+                "rust-lang.rust-analyzer",
+                "tamasfe.even-better-toml",
+                "serayuzgur.crates"
+            ]
+        }
+    }
+}
