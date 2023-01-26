@@ -1,3 +1,5 @@
+use std::ops::Neg;
+
 use crate::{
     geometry::HitRecord,
     ray::Ray,
@@ -64,5 +66,55 @@ impl Material for MetalMaterial {
         } else {
             None
         }
+    }
+}
+
+pub struct DielectricMaterial {
+    pub index_of_refraction: f64,
+}
+
+impl DielectricMaterial {
+    pub fn new(index_of_refraction: f64) -> Self {
+        Self {
+            index_of_refraction,
+        }
+    }
+}
+
+impl DielectricMaterial {
+    fn reflectance(cosine: f64, refraction_index: f64) -> f64 {
+        // Schlick's approximation
+        let r0 = ((1.0 - refraction_index) / (1.0 + refraction_index)).powi(2);
+        r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
+    }
+}
+
+impl Material for DielectricMaterial {
+    fn scatter(&self, ray_in: &Ray, hit_record: &HitRecord) -> Option<Scatter> {
+        let refraction_ratio = if hit_record.front_face {
+            1.0 / self.index_of_refraction
+        } else {
+            self.index_of_refraction
+        };
+
+        let unit_direction = ray_in.direction.unit_vector();
+
+        let cos_theta = unit_direction.neg().dot(hit_record.normal).min(1.0);
+        let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
+
+        let mut direction = unit_direction;
+        if (refraction_ratio * sin_theta > 1.0)
+            || (DielectricMaterial::reflectance(cos_theta, refraction_ratio)
+                > rand::random::<f64>())
+        {
+            direction = direction.reflect(hit_record.normal);
+        } else {
+            direction = direction.refract(hit_record.normal, refraction_ratio);
+        }
+
+        Some(Scatter {
+            scattered_ray: Ray::new(hit_record.point, direction),
+            attenuation: Color::new(1.0, 1.0, 1.0),
+        })
     }
 }

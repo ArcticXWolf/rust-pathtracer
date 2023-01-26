@@ -100,6 +100,17 @@ impl Vec3 {
     pub fn reflect(&self, normal: Self) -> Self {
         *self - 2.0 * self.dot(normal) * normal
     }
+
+    pub fn refract(&self, normal: Self, etai_over_etat: f64) -> Self {
+        let cos_theta = self.neg().dot(normal).min(1.0);
+        let vec_out_perpendicular = etai_over_etat * (*self + cos_theta * normal);
+        let vec_out_parallel = (1.0 - vec_out_perpendicular.len_squared())
+            .abs()
+            .sqrt()
+            .neg()
+            * normal;
+        vec_out_parallel + vec_out_perpendicular
+    }
 }
 
 impl Add for Vec3 {

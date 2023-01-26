@@ -9,7 +9,7 @@ mod vec3;
 
 use camera::Camera;
 use geometry::Sphere;
-use material::{LambertianMaterial, MetalMaterial};
+use material::{DielectricMaterial, LambertianMaterial, MetalMaterial};
 use scene::Scene;
 use vec3::*;
 
@@ -18,35 +18,40 @@ fn main() {
     let aspect_ratio = 16.0 / 9.0;
     let width: usize = 400;
     let height = (width as f64 / aspect_ratio) as usize;
-    let samples_per_pixel = 1000;
+    let samples_per_pixel = 100;
     let max_bounces = 30;
 
     // World
-    let material_ground = LambertianMaterial::new(Color::new(0.8, 0.8, 0.0));
-    let material_center = LambertianMaterial::new(Color::new(0.7, 0.3, 0.3));
-    let material_left = MetalMaterial::new(Color::new(0.8, 0.8, 0.8), 0.3);
-    let material_right = MetalMaterial::new(Color::new(0.8, 0.6, 0.2), 1.0);
+    let material_ground = Arc::new(LambertianMaterial::new(Color::new(0.8, 0.8, 0.0)));
+    let material_center = Arc::new(LambertianMaterial::new(Color::new(0.1, 0.2, 0.5)));
+    let material_left = Arc::new(DielectricMaterial::new(1.5));
+    let material_right = Arc::new(MetalMaterial::new(Color::new(0.8, 0.8, 0.8), 0.0));
 
     let mut world: Scene = Scene::new();
     world.push(Box::new(Sphere::new(
         Vec3::new(0.0, -100.5, -1.0),
         100.0,
-        Arc::new(material_ground),
+        material_ground,
     )));
     world.push(Box::new(Sphere::new(
         Vec3::new(0.0, 0.0, -1.0),
         0.5,
-        Arc::new(material_center),
+        material_center,
     )));
     world.push(Box::new(Sphere::new(
         Vec3::new(-1.0, 0.0, -1.0),
         0.5,
-        Arc::new(material_left),
+        material_left.clone(),
+    )));
+    world.push(Box::new(Sphere::new(
+        Vec3::new(-1.0, 0.0, -1.0),
+        -0.4,
+        material_left,
     )));
     world.push(Box::new(Sphere::new(
         Vec3::new(1.0, 0.0, -1.0),
         0.5,
-        Arc::new(material_right),
+        material_right,
     )));
 
     // Camera
