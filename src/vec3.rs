@@ -52,6 +52,20 @@ impl Vec3 {
         Self::random_in_unitsphere().unit_vector()
     }
 
+    pub fn random_in_unitdisk_xy() -> Self {
+        // rejection sampling
+        loop {
+            let p = Self::new(
+                rand::thread_rng().gen_range(-1.0..1.0),
+                rand::thread_rng().gen_range(-1.0..1.0),
+                0.0,
+            );
+            if p.len_squared() < 1.0 {
+                return p;
+            }
+        }
+    }
+
     pub fn x(&self) -> f64 {
         self.e[0]
     }
