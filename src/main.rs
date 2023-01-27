@@ -1,9 +1,10 @@
-use std::{fs::File, io::BufWriter, path::Path, sync::Arc};
+use std::{fs::File, io::BufWriter, ops::Neg, path::Path, sync::Arc};
 
 mod camera;
 mod geometry;
 mod material;
 mod ray;
+mod renderer;
 mod scene;
 mod vec3;
 
@@ -15,18 +16,38 @@ use vec3::*;
 
 fn main() {
     // Image
-    let aspect_ratio = 3.0 / 2.0;
-    let width: usize = 1200;
-    let height = (width as f64 / aspect_ratio) as usize;
+    let aspect_ratio = 16.0 / 9.0;
+    let width: usize = 1920;
     let samples_per_pixel = 500;
     let max_bounces = 50;
 
     // World
     let world = generate_scene();
 
+    // Preview
+    run(
+        &world,
+        aspect_ratio,
+        width / 4,
+        samples_per_pixel,
+        max_bounces,
+    );
+
+    run(&world, aspect_ratio, width, samples_per_pixel, max_bounces);
+}
+
+fn run(
+    world: &Scene,
+    aspect_ratio: f64,
+    width: usize,
+    samples_per_pixel: usize,
+    max_bounces: usize,
+) {
+    let height = (width as f64 / aspect_ratio) as usize;
+
     // Camera
-    let lookfrom = Vec3::new(13.0, 2.0, 3.0);
-    let lookat = Vec3::new(0.0, 0.0, 0.0);
+    let lookfrom = Vec3::new(12.0, 2.0, 4.0);
+    let lookat = Vec3::new(0.0, 0.5, 0.0);
     let up = Vec3::new(0.0, 1.0, 0.0);
     let focus_dist = 10.0;
     let aperture = 0.1;
@@ -43,29 +64,14 @@ fn main() {
 
     // Render
 
-    let mut pixels: Vec<u8> = vec![];
-
-    for y in (0..height).rev() {
-        for x in 0..width {
-            let mut color_sampling = Color::default();
-
-            for _ in 0..samples_per_pixel {
-                let (u, v) = (
-                    (x as f64 + rand::random::<f64>()) / (width as f64 - 1.0),
-                    (y as f64 + rand::random::<f64>()) / (height as f64 - 1.0),
-                );
-                let ray = camera.ray_at(u, v);
-                color_sampling += ray.color(&world, max_bounces);
-            }
-
-            let color_at_pixel: Color =
-                (color_sampling / samples_per_pixel as f64).map(|v| v.sqrt());
-
-            pixels.append(&mut color_at_pixel.rgb().to_vec());
-        }
-        println!("Finished line {}", y);
-    }
-
+    let pixels: Vec<u8> = renderer::render(
+        world,
+        &camera,
+        width,
+        height,
+        samples_per_pixel,
+        max_bounces,
+    );
     // Write
 
     let path = Path::new(r"./image.png");
@@ -85,27 +91,36 @@ fn generate_scene() -> Scene {
 
     for a in -11..11 {
         for b in -11..11 {
+            if -1 < b && b < 1 && -6 < a && a < 6 {
+                continue;
+            }
+
             let center = Vec3::new(
-                a as f64 + 0.9 * rand::random::<f64>(),
+                a as f64 + 0.5 * rand::random::<f64>(),
                 0.2,
                 b as f64 + 0.9 * rand::random::<f64>(),
             );
             let radius = 0.2;
 
-            let material: Arc<dyn Material> = match rand::random::<f64>() {
-                x if x < 0.8 => {
+            let (material, is_glass): (Arc<dyn Material>, bool) = match rand::random::<f64>() {
+                x if x < 0.6 => {
                     let albedo = Color::random() * Color::random();
-                    Arc::new(LambertianMaterial::new(albedo))
+                    (Arc::new(LambertianMaterial::new(albedo)), false)
                 }
-                x if x < 0.95 => {
+                x if x < 0.8 => {
                     let albedo = Color::random_range(0.5, 1.0);
                     let fuzz = rand::random::<f64>();
-                    Arc::new(MetalMaterial::new(albedo, fuzz))
+                    (Arc::new(MetalMaterial::new(albedo, fuzz)), false)
                 }
-                _ => Arc::new(DielectricMaterial::new(1.5)),
+                _ => (Arc::new(DielectricMaterial::new(1.5)), true),
             };
 
-            world.push(Box::new(Sphere::new(center, radius, material)));
+            if is_glass && rand::random::<f64>() < 0.5 {
+                world.push(Box::new(Sphere::new(center, radius, material.clone())));
+                world.push(Box::new(Sphere::new(center, radius.neg() + 0.02, material)));
+            } else {
+                world.push(Box::new(Sphere::new(center, radius, material)));
+            }
         }
     }
 
