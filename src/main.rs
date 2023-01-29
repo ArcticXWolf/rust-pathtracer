@@ -1,17 +1,18 @@
 use std::{fs::File, io::BufWriter, ops::Neg, path::Path, sync::Arc};
 
+mod bvh;
 mod camera;
 mod geometry;
 mod material;
 mod ray;
 mod renderer;
-mod scene;
 mod vec3;
 
+use bvh::BvhNode;
 use camera::Camera;
+use geometry::Hittable;
 use geometry::Sphere;
 use material::{DielectricMaterial, LambertianMaterial, Material, MetalMaterial};
-use scene::Scene;
 use vec3::*;
 
 fn main() {
@@ -37,7 +38,7 @@ fn main() {
 }
 
 fn run(
-    world: &Scene,
+    world: &impl Hittable,
     aspect_ratio: f64,
     width: usize,
     samples_per_pixel: usize,
@@ -79,8 +80,8 @@ fn run(
     write_file(file, width, height, &pixels).expect("could not write image data");
 }
 
-fn generate_scene() -> Scene {
-    let mut world: Scene = Scene::new();
+fn generate_scene() -> BvhNode {
+    let mut world: Vec<Box<dyn Hittable>> = vec![];
 
     let material_ground = Arc::new(LambertianMaterial::new(Color::new(0.5, 0.5, 0.5)));
     world.push(Box::new(Sphere::new(
@@ -145,7 +146,7 @@ fn generate_scene() -> Scene {
         material_big3,
     )));
 
-    world
+    BvhNode::new(world)
 }
 
 fn write_file(

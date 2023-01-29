@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{material::Material, ray::Ray, vec3::Vec3};
+use crate::{bvh::Aabb, material::Material, ray::Ray, vec3::Vec3};
 
 pub struct HitRecord<'a> {
     pub t: f64,
@@ -33,10 +33,75 @@ impl<'a> HitRecord<'a> {
     }
 }
 
-pub trait Hittable: Sync + Send {
+pub trait Hittable: Sync + Send + CloneHittable {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
+    fn bounding_box(&self) -> Aabb;
 }
 
+trait CloneHittable {
+    fn clone_hittable<'a>(&self) -> Box<dyn Hittable>;
+}
+
+impl<T> CloneHittable for T
+where
+    T: Hittable + Clone + 'static,
+{
+    fn clone_hittable(&self) -> Box<dyn Hittable> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn Hittable> {
+    fn clone(&self) -> Self {
+        self.clone_hittable()
+    }
+}
+
+#[derive(Clone)]
+pub struct HittableList {
+    objects: Vec<Box<dyn Hittable>>,
+}
+
+impl HittableList {
+    pub fn new() -> Self {
+        Self { objects: vec![] }
+    }
+
+    pub fn push(&mut self, hittable: Box<dyn Hittable>) {
+        self.objects.push(hittable);
+    }
+}
+
+impl Hittable for HittableList {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        let mut possible_hit: Option<HitRecord> = None;
+        let mut closest_so_far = t_max;
+
+        for object in self.objects.iter() {
+            if let Some(hit) = object.hit(ray, t_min, closest_so_far) {
+                closest_so_far = hit.t;
+                possible_hit = Some(hit);
+            }
+        }
+
+        possible_hit
+    }
+
+    fn bounding_box(&self) -> Aabb {
+        if let Some(first_object) = self.objects.first() {
+            let mut containing_box = first_object.bounding_box();
+
+            for object in self.objects.iter().skip(1) {
+                let obj_box = object.bounding_box();
+                containing_box = containing_box.surrounding_box(&obj_box);
+            }
+            return containing_box;
+        }
+        panic!("called bounding box of empty Hittable list");
+    }
+}
+
+#[derive(Clone)]
 pub struct Sphere {
     center: Vec3,
     radius: f64,
@@ -82,5 +147,12 @@ impl Hittable for Sphere {
             outward_normal,
             &*self.material,
         ))
+    }
+
+    fn bounding_box(&self) -> Aabb {
+        Aabb::new(
+            self.center - Vec3::new(self.radius, self.radius, self.radius),
+            self.center + Vec3::new(self.radius, self.radius, self.radius),
+        )
     }
 }

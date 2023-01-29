@@ -3,10 +3,10 @@ use std::time::Instant;
 use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 
-use crate::{camera::Camera, scene::Scene, vec3::Color};
+use crate::{camera::Camera, geometry::Hittable, vec3::Color};
 
 pub fn render(
-    world: &Scene,
+    world: &impl Hittable,
     camera: &Camera,
     width: usize,
     height: usize,
