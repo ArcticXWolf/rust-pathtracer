@@ -12,72 +12,65 @@ use bvh::BvhNode;
 use camera::Camera;
 use geometry::Hittable;
 use geometry::Sphere;
+use indicatif::ProgressBar;
+use indicatif::ProgressStyle;
 use material::{DielectricMaterial, LambertianMaterial, Material, MetalMaterial};
 use vec3::*;
 
 fn main() {
     // Image
     let aspect_ratio = 16.0 / 9.0;
-    let width: usize = 1920;
-    let samples_per_pixel = 500;
-    let max_bounces = 50;
+    let width: usize = 854;
+    let height = (width as f64 / aspect_ratio) as usize;
+    let samples_per_pixel = 100;
+    let max_bounces = 20;
+    let fps = 30.0;
+    let duration = 4.0;
+    let amount_of_frames = duration * fps;
 
     // World
     let world = generate_scene();
 
-    // Preview
-    run(
-        &world,
-        aspect_ratio,
-        width / 4,
-        samples_per_pixel,
-        max_bounces,
-    );
-
-    run(&world, aspect_ratio, width, samples_per_pixel, max_bounces);
-}
-
-fn run(
-    world: &impl Hittable,
-    aspect_ratio: f64,
-    width: usize,
-    samples_per_pixel: usize,
-    max_bounces: usize,
-) {
-    let height = (width as f64 / aspect_ratio) as usize;
-
-    // Camera
-    let lookfrom = Vec3::new(12.0, 2.0, 4.0);
-    let lookat = Vec3::new(0.0, 0.5, 0.0);
-    let up = Vec3::new(0.0, 1.0, 0.0);
-    let focus_dist = 10.0;
-    let aperture = 0.1;
-
-    let camera = Camera::new(
-        lookfrom,
-        lookat,
-        up,
-        20.0,
-        aspect_ratio,
-        aperture,
-        focus_dist,
-    );
-
-    // Render
-
-    let pixels: Vec<u8> = renderer::render(
-        world,
-        &camera,
-        width,
-        height,
-        samples_per_pixel,
-        max_bounces,
-    );
-    // Write
-
-    let path = Path::new(r"./image.png");
+    let path = Path::new(r"./image.gif");
     let file = File::create(path).expect("could not create image file");
-    write_file(file, width, height, &pixels).expect("could not write image data");
+    let mut gif_encoder = gif::Encoder::new(file, width as u16, height as u16, &[]).unwrap();
+    gif_encoder.set_repeat(gif::Repeat::Infinite).unwrap();
+
+    let bar = ProgressBar::new(amount_of_frames as u64);
+    bar.set_prefix("💻 Rendering GIF");
+    bar.set_style(
+        ProgressStyle::default_bar()
+            .template("{prefix:.white} [{elapsed_precise}/{duration_precise}] {bar:40.green/green} {percent}%")
+            .expect("template error for indicatif"),
+    );
+    bar.tick();
+
+    for frame_index in 0..(amount_of_frames as usize) {
+        let t = (frame_index as f64) / amount_of_frames;
+        let camera = generate_camera_at(t, aspect_ratio);
+
+        // Render
+        let pixels: Vec<u8> = renderer::render(
+            &world,
+            &camera,
+            width,
+            height,
+            samples_per_pixel,
+            max_bounces,
+        );
+
+        let mut frame = gif::Frame::from_rgb(width as u16, height as u16, &pixels);
+        frame.delay = (100.0 / fps) as u16;
+        gif_encoder.write_frame(&frame).unwrap();
+
+        bar.inc(1);
+    }
+    bar.finish();
+
+    // // Write PNG
+    // let path = Path::new(r"./image.png");
+    // let file = File::create(path).expect("could not create image file");
+    // write_file(file, width, height, &pixels).expect("could not write image data");
 }
 
 fn generate_scene() -> BvhNode {
@@ -149,7 +142,38 @@ fn generate_scene() -> BvhNode {
     BvhNode::new(world)
 }
 
-fn write_file(
+fn generate_camera_at(t: f64, aspect_ratio: f64) -> Camera {
+    // Camera
+    let lookfrom = Vec3::new(
+        12.0 - ease_in_out_quint(t) * 24.0,
+        2.0 + ease_in_out_quint(t),
+        8.0,
+    );
+    let lookat = Vec3::new(0.0, 0.5, 0.0);
+    let up = Vec3::new(0.0, 1.0, 0.0);
+    let focus_dist = 10.0;
+    let aperture = 0.1;
+
+    Camera::new(
+        lookfrom,
+        lookat,
+        up,
+        20.0,
+        aspect_ratio,
+        aperture,
+        focus_dist,
+    )
+}
+
+fn ease_in_out_quint(x: f64) -> f64 {
+    if x < 0.5 {
+        16.0 * x.powi(5)
+    } else {
+        1.0 - (-2.0 * x + 2.0).powi(5) / 2.0
+    }
+}
+
+/* fn write_file(
     file: File,
     width: usize,
     height: usize,
@@ -163,3 +187,4 @@ fn write_file(
 
     writer.write_image_data(pixels)
 }
+ */

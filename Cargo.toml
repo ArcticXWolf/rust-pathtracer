@@ -6,6 +6,7 @@ authors = ["Jan Niklas Richter"]
 
 [dependencies]
 clap = { version = "4.1.4", features = ["derive"] }
+gif = "0.12.0"
 indicatif = "0.17.3"
 png = "0.17.7"
 rand = "0.8.5"

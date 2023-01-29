@@ -1,6 +1,3 @@
-use std::time::Instant;
-
-use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 
 use crate::{camera::Camera, geometry::Hittable, vec3::Color};
@@ -13,20 +10,7 @@ pub fn render(
     samples_per_pixel: usize,
     max_bounces: usize,
 ) -> Vec<u8> {
-    const PROGRESS_BAR_INCREMENT: usize = 64;
-    let bar = &Box::new(ProgressBar::new(
-        (width * height / PROGRESS_BAR_INCREMENT) as u64,
-    ));
-    bar.set_prefix("💻 Rendering");
-    bar.set_style(
-        ProgressStyle::default_bar()
-            .template("{prefix:.white} [{elapsed_precise}/{duration_precise}] {bar:40.green/green} {percent}%")
-            .expect("template error for indicatif"),
-    );
-
-    let timer_start = Instant::now();
-
-    let pixels = (0..height)
+    (0..height)
         .into_par_iter()
         .rev()
         .flat_map(|y| {
@@ -45,20 +29,8 @@ pub fn render(
                 let color_at_pixel: Color =
                     (color_sampling / samples_per_pixel as f64).map(|v| v.sqrt());
 
-                if x % PROGRESS_BAR_INCREMENT == 0 {
-                    bar.inc(1);
-                }
-
                 color_at_pixel.rgb().to_vec()
             })
         })
-        .collect();
-
-    let timer_end = timer_start.elapsed();
-
-    bar.finish();
-
-    println!("Finished ({})", HumanDuration(timer_end));
-
-    pixels
+        .collect()
 }
