@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops::Neg, sync::Arc};
 
 use crate::{bvh::Aabb, material::Material, ray::Ray, vec3::Vec3};
 
@@ -6,6 +6,8 @@ pub struct HitRecord<'a> {
     pub t: f64,
     pub point: Vec3,
     pub normal: Vec3,
+    pub u: f64,
+    pub v: f64,
     pub front_face: bool,
     pub material: &'a dyn Material,
 }
@@ -16,6 +18,8 @@ impl<'a> HitRecord<'a> {
         point: Vec3,
         ray: &Ray,
         outward_normal: Vec3,
+        u: f64,
+        v: f64,
         material: &'a dyn Material,
     ) -> HitRecord<'a> {
         let front_face = ray.direction.dot(outward_normal) < 0.0;
@@ -27,6 +31,8 @@ impl<'a> HitRecord<'a> {
             } else {
                 -outward_normal
             },
+            u,
+            v,
             front_face,
             material,
         }
@@ -72,6 +78,16 @@ impl Sphere {
             material,
         }
     }
+
+    fn get_sphere_uv(point: Vec3) -> (f64, f64) {
+        let theta = point.y().neg().acos();
+        let phi = point.z().neg().atan2(point.x()) + std::f64::consts::PI;
+
+        (
+            phi / (2.0 * std::f64::consts::PI),
+            theta / std::f64::consts::PI,
+        )
+    }
 }
 
 impl Hittable for Sphere {
@@ -95,20 +111,23 @@ impl Hittable for Sphere {
 
         let point = ray.at(root);
         let outward_normal = (point - self.center) / self.radius;
+        let (u, v) = Sphere::get_sphere_uv(outward_normal);
 
         Some(HitRecord::new(
             root,
             point,
             ray,
             outward_normal,
+            u,
+            v,
             &*self.material,
         ))
     }
 
     fn bounding_box(&self) -> Aabb {
         Aabb::new(
-            self.center - Vec3::new(self.radius, self.radius, self.radius),
-            self.center + Vec3::new(self.radius, self.radius, self.radius),
+            self.center - Vec3::new(self.radius.abs(), self.radius.abs(), self.radius.abs()),
+            self.center + Vec3::new(self.radius.abs(), self.radius.abs(), self.radius.abs()),
         )
     }
 }

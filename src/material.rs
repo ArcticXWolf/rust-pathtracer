@@ -3,6 +3,7 @@ use std::ops::Neg;
 use crate::{
     geometry::HitRecord,
     ray::Ray,
+    texture::Texture,
     vec3::{Color, Vec3},
 };
 
@@ -16,11 +17,11 @@ pub trait Material: Sync + Send {
 }
 
 pub struct LambertianMaterial {
-    pub albedo: Color,
+    pub albedo: Box<dyn Texture>,
 }
 
 impl LambertianMaterial {
-    pub fn new(albedo: Color) -> Self {
+    pub fn new(albedo: Box<dyn Texture>) -> Self {
         Self { albedo }
     }
 }
@@ -35,7 +36,9 @@ impl Material for LambertianMaterial {
 
         Some(Scatter {
             scattered_ray: Ray::new(hit_record.point, scatter_direction),
-            attenuation: self.albedo,
+            attenuation: self
+                .albedo
+                .value(hit_record.u, hit_record.v, hit_record.point),
         })
     }
 }
