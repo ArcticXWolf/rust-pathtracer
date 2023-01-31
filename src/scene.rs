@@ -322,7 +322,7 @@ impl Scene for CornellBoxScene {
             image_settings: ImageSettings {
                 width: 854,
                 height: 854,
-                samples_per_pixel: 200,
+                samples_per_pixel: 2000,
                 max_bounces: 50,
                 background: Color::new(0.0, 0.0, 0.0),
             },
@@ -368,6 +368,7 @@ impl Scene for CornellBoxScene {
         let material_light = Arc::new(DiffuseLightMaterial::new_from_color(Color::new(
             15.0, 15.0, 15.0,
         )));
+        let material_glass = Arc::new(DielectricMaterial::new(1.5));
 
         world.push(Box::new(
             RectangleYZ::new(
@@ -419,6 +420,12 @@ impl Scene for CornellBoxScene {
             )
             .expect("rectangle definition is not axis aligned"),
         ));
+
+        world.push(Box::new(Sphere::new(
+            Vec3::new(190.0, 90.0, 190.0),
+            90.0,
+            material_glass,
+        )));
 
         BvhNode::new(world)
     }
