@@ -3,7 +3,7 @@ use std::{ops::Neg, sync::Arc};
 use crate::{
     bvh::BvhNode,
     camera::Camera,
-    geometry::{Hittable, RectangleXY, RectangleXZ, RectangleYZ, Sphere},
+    geometry::{AABox, Hittable, RectangleXY, RectangleXZ, RectangleYZ, Sphere},
     material::{
         DielectricMaterial, DiffuseLightMaterial, LambertianMaterial, Material, MetalMaterial,
     },
@@ -323,7 +323,7 @@ impl Scene for CornellBoxScene {
                 width: 854,
                 height: 854,
                 samples_per_pixel: 2000,
-                max_bounces: 50,
+                max_bounces: 20,
                 background: Color::new(0.0, 0.0, 0.0),
             },
         }
@@ -416,13 +416,29 @@ impl Scene for CornellBoxScene {
             RectangleXY::new(
                 Vec3::new(0.0, 0.0, 555.0),
                 Vec3::new(555.0, 555.0, 555.0),
-                material_white,
+                material_white.clone(),
             )
             .expect("rectangle definition is not axis aligned"),
         ));
 
+        world.push(Box::new(AABox::new(
+            Vec3::new(130.0, 0.0, 65.0),
+            Vec3::new(295.0, 165.0, 230.0),
+            material_white.clone(),
+        )));
+        world.push(Box::new(AABox::new(
+            Vec3::new(265.0, 0.0, 295.0),
+            Vec3::new(430.0, 330.0, 460.0),
+            material_white,
+        )));
+
         world.push(Box::new(Sphere::new(
-            Vec3::new(190.0, 90.0, 190.0),
+            Vec3::new(212.5, 255.0, 147.5),
+            90.0,
+            material_glass.clone(),
+        )));
+        world.push(Box::new(Sphere::new(
+            Vec3::new(347.5, 420.0, 377.5),
             90.0,
             material_glass,
         )));

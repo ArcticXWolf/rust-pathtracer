@@ -63,6 +63,40 @@ impl Clone for Box<dyn Hittable> {
     }
 }
 
+impl Hittable for Vec<Box<dyn Hittable>> {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        let mut closest_so_far = t_max;
+        let mut result_record = None;
+
+        for object in self {
+            if let Some(hit_record) = object.hit(ray, t_min, closest_so_far) {
+                closest_so_far = hit_record.t;
+                result_record = Some(hit_record);
+            }
+        }
+
+        result_record
+    }
+
+    fn bounding_box(&self) -> Aabb {
+        if self.is_empty() {
+            panic!("called bounding box on empty hittable list");
+        }
+
+        let mut output_box: Option<Aabb> = None;
+
+        for object in self {
+            if let Some(existing_box) = output_box {
+                output_box = Some(existing_box.surrounding_box(&object.bounding_box()));
+            } else {
+                output_box = Some(object.bounding_box());
+            }
+        }
+
+        output_box.expect("could not construct bounding box for hittable list")
+    }
+}
+
 #[derive(Clone)]
 pub struct Sphere {
     center: Vec3,
@@ -318,5 +352,94 @@ impl Hittable for RectangleYZ {
             Vec3::new(self.start.x() - 0.0001, self.start.y(), self.start.z()),
             Vec3::new(self.start.x() + 0.0001, self.end.y(), self.end.z()),
         )
+    }
+}
+
+#[derive(Clone)]
+pub struct AABox {
+    minimum: Vec3,
+    maximum: Vec3,
+    sides: Vec<Box<dyn Hittable>>,
+}
+
+impl AABox {
+    pub fn new(start: Vec3, end: Vec3, material: Arc<dyn Material>) -> Self {
+        let minimum = Vec3::new(
+            start.x().min(end.x()),
+            start.y().min(end.y()),
+            start.z().min(end.z()),
+        );
+        let maximum = Vec3::new(
+            start.x().max(end.x()),
+            start.y().max(end.y()),
+            start.z().max(end.z()),
+        );
+
+        let sides: Vec<Box<dyn Hittable>> = vec![
+            Box::new(
+                RectangleXY::new(
+                    Vec3::new(minimum.x(), minimum.y(), minimum.z()),
+                    Vec3::new(maximum.x(), maximum.y(), minimum.z()),
+                    material.clone(),
+                )
+                .expect("rectangle definition is not axis aligned"),
+            ),
+            Box::new(
+                RectangleXY::new(
+                    Vec3::new(minimum.x(), minimum.y(), maximum.z()),
+                    Vec3::new(maximum.x(), maximum.y(), maximum.z()),
+                    material.clone(),
+                )
+                .expect("rectangle definition is not axis aligned"),
+            ),
+            Box::new(
+                RectangleXZ::new(
+                    Vec3::new(minimum.x(), minimum.y(), minimum.z()),
+                    Vec3::new(maximum.x(), minimum.y(), maximum.z()),
+                    material.clone(),
+                )
+                .expect("rectangle definition is not axis aligned"),
+            ),
+            Box::new(
+                RectangleXZ::new(
+                    Vec3::new(minimum.x(), maximum.y(), minimum.z()),
+                    Vec3::new(maximum.x(), maximum.y(), maximum.z()),
+                    material.clone(),
+                )
+                .expect("rectangle definition is not axis aligned"),
+            ),
+            Box::new(
+                RectangleYZ::new(
+                    Vec3::new(minimum.x(), minimum.y(), minimum.z()),
+                    Vec3::new(minimum.x(), maximum.y(), maximum.z()),
+                    material.clone(),
+                )
+                .expect("rectangle definition is not axis aligned"),
+            ),
+            Box::new(
+                RectangleYZ::new(
+                    Vec3::new(maximum.x(), minimum.y(), minimum.z()),
+                    Vec3::new(maximum.x(), maximum.y(), maximum.z()),
+                    material,
+                )
+                .expect("rectangle definition is not axis aligned"),
+            ),
+        ];
+
+        Self {
+            minimum,
+            maximum,
+            sides,
+        }
+    }
+}
+
+impl Hittable for AABox {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        self.sides.hit(ray, t_min, t_max)
+    }
+
+    fn bounding_box(&self) -> Aabb {
+        Aabb::new(self.minimum, self.maximum)
     }
 }
