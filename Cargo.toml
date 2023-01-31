@@ -8,6 +8,7 @@ authors = ["Jan Niklas Richter"]
 clap = { version = "4.1.4", features = ["derive"] }
 gif = "0.12.0"
 indicatif = "0.17.3"
+noise = "0.8.2"
 png = "0.17.7"
 rand = "0.8.5"
 rayon = "1.6.1"

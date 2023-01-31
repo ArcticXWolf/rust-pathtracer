@@ -3,7 +3,7 @@ use std::ops::Neg;
 use crate::{
     geometry::HitRecord,
     ray::Ray,
-    texture::Texture,
+    texture::{SolidColorTexture, Texture},
     vec3::{Color, Vec3},
 };
 
@@ -13,7 +13,12 @@ pub struct Scatter {
 }
 
 pub trait Material: Sync + Send {
-    fn scatter(&self, ray_in: &Ray, hit_record: &HitRecord) -> Option<Scatter>;
+    fn scatter(&self, _ray_in: &Ray, _hit_record: &HitRecord) -> Option<Scatter> {
+        None
+    }
+    fn emits(&self, _u: f64, _v: f64, _point: Vec3) -> Color {
+        Color::default()
+    }
 }
 
 pub struct LambertianMaterial {
@@ -23,6 +28,12 @@ pub struct LambertianMaterial {
 impl LambertianMaterial {
     pub fn new(albedo: Box<dyn Texture>) -> Self {
         Self { albedo }
+    }
+
+    pub fn new_from_color(color: Color) -> Self {
+        Self {
+            albedo: Box::new(SolidColorTexture::new(color)),
+        }
     }
 }
 
@@ -119,5 +130,27 @@ impl Material for DielectricMaterial {
             scattered_ray: Ray::new(hit_record.point, direction),
             attenuation: Color::new(1.0, 1.0, 1.0),
         })
+    }
+}
+
+pub struct DiffuseLightMaterial {
+    pub emit: Box<dyn Texture>,
+}
+
+impl DiffuseLightMaterial {
+    pub fn new(emit: Box<dyn Texture>) -> Self {
+        Self { emit }
+    }
+
+    pub fn new_from_color(color: Color) -> Self {
+        Self {
+            emit: Box::new(SolidColorTexture::new(color)),
+        }
+    }
+}
+
+impl Material for DiffuseLightMaterial {
+    fn emits(&self, u: f64, v: f64, point: Vec3) -> Color {
+        self.emit.value(u, v, point)
     }
 }

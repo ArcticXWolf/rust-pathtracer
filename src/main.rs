@@ -16,7 +16,7 @@ use scene::Scene;
 use scene::*;
 
 fn main() {
-    let scene: Box<dyn Scene> = Box::new(TwoSphereCheckersScene {});
+    let scene: Box<dyn Scene> = Box::new(CornellBoxScene {});
     let world = scene.get_world();
     let settings = scene.get_output_settings();
     let amount_of_frames = match settings {
@@ -55,6 +55,7 @@ fn main() {
             &camera,
             image_settings.width,
             image_settings.height,
+            image_settings.background,
             image_settings.samples_per_pixel,
             image_settings.max_bounces,
         );

@@ -1,3 +1,5 @@
+use noise::{NoiseFn, Perlin};
+
 use crate::vec3::{Color, Vec3};
 
 pub trait Texture: Send + Sync {
@@ -39,5 +41,41 @@ impl Texture for CheckerTexture {
         } else {
             self.even.value(u, v, point)
         }
+    }
+}
+
+pub struct PerlinNoiseTexture {
+    noise: Box<Perlin>,
+    scale: f64,
+}
+
+impl PerlinNoiseTexture {
+    pub fn new(scale: f64) -> Self {
+        Self {
+            noise: Box::new(Perlin::new(rand::random())),
+            scale,
+        }
+    }
+
+    pub fn turbulance(&self, point: Vec3, depth: usize) -> f64 {
+        let mut accumulator = 0.0;
+        let mut p = point;
+        let mut weight = 1.0;
+
+        for _ in 0..depth {
+            accumulator += weight * self.noise.get(p.e);
+            weight *= 0.5;
+            p *= 2.0;
+        }
+
+        accumulator.abs()
+    }
+}
+
+impl Texture for PerlinNoiseTexture {
+    fn value(&self, _: f64, _: f64, point: Vec3) -> Color {
+        Vec3::new(1.0, 1.0, 1.0)
+            * 0.5
+            * (1.0 - (self.scale * point.z() + 10.0 * self.turbulance(point, 7)).sin())
     }
 }

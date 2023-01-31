@@ -3,9 +3,11 @@ use std::{ops::Neg, sync::Arc};
 use crate::{
     bvh::BvhNode,
     camera::Camera,
-    geometry::{Hittable, Sphere},
-    material::{DielectricMaterial, LambertianMaterial, Material, MetalMaterial},
-    texture::{CheckerTexture, SolidColorTexture},
+    geometry::{Hittable, RectangleXY, RectangleXZ, RectangleYZ, Sphere},
+    material::{
+        DielectricMaterial, DiffuseLightMaterial, LambertianMaterial, Material, MetalMaterial,
+    },
+    texture::{CheckerTexture, PerlinNoiseTexture, SolidColorTexture},
     vec3::{Color, Vec3},
 };
 
@@ -14,6 +16,7 @@ pub struct ImageSettings {
     pub height: usize,
     pub samples_per_pixel: usize,
     pub max_bounces: usize,
+    pub background: Color,
 }
 
 pub enum OutputSettings {
@@ -43,6 +46,7 @@ impl Scene for SphereFieldScene {
                 height: 480,
                 samples_per_pixel: 250,
                 max_bounces: 20,
+                background: Color::new(1.0, 1.0, 1.0),
             },
             fps: 30.0,
             duration: 10.0,
@@ -168,6 +172,7 @@ impl Scene for TwoSphereCheckersScene {
                 height: 480,
                 samples_per_pixel: 250,
                 max_bounces: 20,
+                background: Color::new(1.0, 1.0, 1.0),
             },
         }
     }
@@ -207,13 +212,213 @@ impl Scene for TwoSphereCheckersScene {
         world.push(Box::new(Sphere::new(
             Vec3::new(0.0, -10.0, 0.0),
             10.0,
-            material_ground.clone(),
+            material_ground,
         )));
+
+        let perlin_texture = PerlinNoiseTexture::new(4.0);
+        let material_top = Arc::new(LambertianMaterial::new(Box::new(perlin_texture)));
         world.push(Box::new(Sphere::new(
             Vec3::new(0.0, 10.0, 0.0),
             10.0,
+            material_top,
+        )));
+
+        BvhNode::new(world)
+    }
+}
+
+pub struct LightTestScene;
+
+impl Scene for LightTestScene {
+    fn get_output_settings(&self) -> OutputSettings {
+        OutputSettings::StaticImage {
+            image_settings: ImageSettings {
+                width: 854,
+                height: 480,
+                samples_per_pixel: 2000,
+                max_bounces: 50,
+                background: Color::new(0.0, 0.0, 0.0),
+            },
+        }
+    }
+
+    fn get_camera_at(&self, _: f64) -> Camera {
+        let lookfrom = Vec3::new(26.0, 3.0, 6.0);
+        let lookat = Vec3::new(0.0, 2.0, 0.0);
+        let up = Vec3::new(0.0, 1.0, 0.0);
+        let focus_dist = 10.0;
+        let aperture = 0.0;
+        let aspect_ratio = match self.get_output_settings() {
+            OutputSettings::StaticImage { image_settings } => {
+                image_settings.width as f64 / image_settings.height as f64
+            }
+            _ => unimplemented!(),
+        };
+
+        Camera::new(
+            lookfrom,
+            lookat,
+            up,
+            20.0,
+            aspect_ratio,
+            aperture,
+            focus_dist,
+        )
+    }
+
+    fn get_world(&self) -> BvhNode {
+        let mut world: Vec<Box<dyn Hittable>> = vec![];
+
+        let perlin_texture = PerlinNoiseTexture::new(4.0);
+        let material_ground = Arc::new(LambertianMaterial::new(Box::new(perlin_texture)));
+        world.push(Box::new(Sphere::new(
+            Vec3::new(0.0, -1000.0, 0.0),
+            1000.0,
+            material_ground.clone(),
+        )));
+        world.push(Box::new(Sphere::new(
+            Vec3::new(0.0, 2.0, 0.0),
+            2.0,
             material_ground,
         )));
+
+        let material_light = Arc::new(DiffuseLightMaterial::new_from_color(Color::new(
+            4.0, 4.0, 4.0,
+        )));
+        world.push(Box::new(
+            RectangleXY::new(
+                Vec3::new(3.0, 1.0, -2.0),
+                Vec3::new(5.0, 3.0, -2.0),
+                material_light.clone(),
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+        world.push(Box::new(
+            RectangleXZ::new(
+                Vec3::new(-1.0, 6.0, -1.0),
+                Vec3::new(1.0, 6.0, 1.0),
+                material_light.clone(),
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+        world.push(Box::new(
+            RectangleYZ::new(
+                Vec3::new(-6.0, 1.0, -2.0),
+                Vec3::new(-6.0, 3.0, 2.0),
+                material_light,
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+
+        BvhNode::new(world)
+    }
+}
+
+pub struct CornellBoxScene;
+
+impl Scene for CornellBoxScene {
+    fn get_output_settings(&self) -> OutputSettings {
+        OutputSettings::StaticImage {
+            image_settings: ImageSettings {
+                width: 854,
+                height: 854,
+                samples_per_pixel: 200,
+                max_bounces: 50,
+                background: Color::new(0.0, 0.0, 0.0),
+            },
+        }
+    }
+
+    fn get_camera_at(&self, _: f64) -> Camera {
+        let lookfrom = Vec3::new(278.0, 278.0, -800.0);
+        let lookat = Vec3::new(278.0, 278.0, 0.0);
+        let up = Vec3::new(0.0, 1.0, 0.0);
+        let focus_dist = 10.0;
+        let aperture = 0.0;
+        let aspect_ratio = match self.get_output_settings() {
+            OutputSettings::StaticImage { image_settings } => {
+                image_settings.width as f64 / image_settings.height as f64
+            }
+            _ => unimplemented!(),
+        };
+
+        Camera::new(
+            lookfrom,
+            lookat,
+            up,
+            40.0,
+            aspect_ratio,
+            aperture,
+            focus_dist,
+        )
+    }
+
+    fn get_world(&self) -> BvhNode {
+        let mut world: Vec<Box<dyn Hittable>> = vec![];
+
+        let material_red = Arc::new(LambertianMaterial::new_from_color(Color::new(
+            0.65, 0.05, 0.05,
+        )));
+        let material_white = Arc::new(LambertianMaterial::new_from_color(Color::new(
+            0.73, 0.73, 0.73,
+        )));
+        let material_green = Arc::new(LambertianMaterial::new_from_color(Color::new(
+            0.12, 0.45, 0.15,
+        )));
+        let material_light = Arc::new(DiffuseLightMaterial::new_from_color(Color::new(
+            15.0, 15.0, 15.0,
+        )));
+
+        world.push(Box::new(
+            RectangleYZ::new(
+                Vec3::new(555.0, 0.0, 0.0),
+                Vec3::new(555.0, 555.0, 555.0),
+                material_green,
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+        world.push(Box::new(
+            RectangleYZ::new(
+                Vec3::new(0.0, 0.0, 0.0),
+                Vec3::new(0.0, 555.0, 555.0),
+                material_red,
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+
+        world.push(Box::new(
+            RectangleXZ::new(
+                Vec3::new(0.0, 555.0, 0.0),
+                Vec3::new(555.0, 555.0, 555.0),
+                material_white.clone(),
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+        world.push(Box::new(
+            RectangleXZ::new(
+                Vec3::new(0.0, 0.0, 0.0),
+                Vec3::new(555.0, 0.0, 555.0),
+                material_white.clone(),
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+        world.push(Box::new(
+            RectangleXZ::new(
+                Vec3::new(213.0, 554.0, 227.0),
+                Vec3::new(343.0, 554.0, 332.0),
+                material_light,
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+
+        world.push(Box::new(
+            RectangleXY::new(
+                Vec3::new(0.0, 0.0, 555.0),
+                Vec3::new(555.0, 555.0, 555.0),
+                material_white,
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
 
         BvhNode::new(world)
     }

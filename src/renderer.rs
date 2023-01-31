@@ -7,6 +7,7 @@ pub fn render(
     camera: &Camera,
     width: usize,
     height: usize,
+    background: Color,
     samples_per_pixel: usize,
     max_bounces: usize,
 ) -> Vec<u8> {
@@ -23,7 +24,7 @@ pub fn render(
                         (y as f64 + rand::random::<f64>()) / (height as f64 - 1.0),
                     );
                     let ray = camera.ray_at(u, v);
-                    color_sampling += ray.color(world, max_bounces);
+                    color_sampling += ray.color(world, background, max_bounces);
                 }
 
                 let color_at_pixel: Color =

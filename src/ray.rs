@@ -17,21 +17,28 @@ impl Ray {
         self.origin + t * self.direction
     }
 
-    pub fn color(&self, hittable: &impl Hittable, bounces_left: usize) -> Color {
+    pub fn color(&self, hittable: &impl Hittable, background: Color, bounces_left: usize) -> Color {
         if bounces_left == 0 {
             return Color::default();
         }
 
         if let Some(hit_record) = hittable.hit(self, 0.001, f64::INFINITY) {
+            let emitted = hit_record
+                .material
+                .emits(hit_record.u, hit_record.v, hit_record.point);
+
             if let Some(scatter) = hit_record.material.scatter(self, &hit_record) {
-                return scatter.attenuation
-                    * scatter.scattered_ray.color(hittable, bounces_left - 1);
+                return emitted
+                    + scatter.attenuation
+                        * scatter
+                            .scattered_ray
+                            .color(hittable, background, bounces_left - 1);
             }
-            return Color::default();
+
+            return emitted;
         }
 
         // Background
-        let t = 0.5 * (self.direction.unit_vector().y() + 1.0);
-        (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)
+        background
     }
 }
