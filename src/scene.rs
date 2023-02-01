@@ -3,7 +3,7 @@ use std::{ops::Neg, sync::Arc};
 use crate::{
     bvh::BvhNode,
     camera::Camera,
-    geometry::{AABox, Hittable, RectangleXY, RectangleXZ, RectangleYZ, Sphere},
+    geometry::{AABox, Hittable, RectangleXY, RectangleXZ, RectangleYZ, Sphere, Triangle},
     material::{
         DielectricMaterial, DiffuseLightMaterial, LambertianMaterial, Material, MetalMaterial,
     },
@@ -289,6 +289,7 @@ impl Scene for LightTestScene {
             RectangleXY::new(
                 Vec3::new(3.0, 1.0, -2.0),
                 Vec3::new(5.0, 3.0, -2.0),
+                1.0,
                 material_light.clone(),
             )
             .expect("rectangle definition is not axis aligned"),
@@ -297,6 +298,7 @@ impl Scene for LightTestScene {
             RectangleXZ::new(
                 Vec3::new(-1.0, 6.0, -1.0),
                 Vec3::new(1.0, 6.0, 1.0),
+                -1.0,
                 material_light.clone(),
             )
             .expect("rectangle definition is not axis aligned"),
@@ -305,6 +307,7 @@ impl Scene for LightTestScene {
             RectangleYZ::new(
                 Vec3::new(-6.0, 1.0, -2.0),
                 Vec3::new(-6.0, 3.0, 2.0),
+                1.0,
                 material_light,
             )
             .expect("rectangle definition is not axis aligned"),
@@ -320,9 +323,9 @@ impl Scene for CornellBoxScene {
     fn get_output_settings(&self) -> OutputSettings {
         OutputSettings::StaticImage {
             image_settings: ImageSettings {
-                width: 854,
-                height: 854,
-                samples_per_pixel: 2000,
+                width: 400,
+                height: 400,
+                samples_per_pixel: 1000,
                 max_bounces: 20,
                 background: Color::new(0.0, 0.0, 0.0),
             },
@@ -374,6 +377,7 @@ impl Scene for CornellBoxScene {
             RectangleYZ::new(
                 Vec3::new(555.0, 0.0, 0.0),
                 Vec3::new(555.0, 555.0, 555.0),
+                -1.0,
                 material_green,
             )
             .expect("rectangle definition is not axis aligned"),
@@ -382,6 +386,7 @@ impl Scene for CornellBoxScene {
             RectangleYZ::new(
                 Vec3::new(0.0, 0.0, 0.0),
                 Vec3::new(0.0, 555.0, 555.0),
+                1.0,
                 material_red,
             )
             .expect("rectangle definition is not axis aligned"),
@@ -391,6 +396,7 @@ impl Scene for CornellBoxScene {
             RectangleXZ::new(
                 Vec3::new(0.0, 555.0, 0.0),
                 Vec3::new(555.0, 555.0, 555.0),
+                -1.0,
                 material_white.clone(),
             )
             .expect("rectangle definition is not axis aligned"),
@@ -399,6 +405,7 @@ impl Scene for CornellBoxScene {
             RectangleXZ::new(
                 Vec3::new(0.0, 0.0, 0.0),
                 Vec3::new(555.0, 0.0, 555.0),
+                1.0,
                 material_white.clone(),
             )
             .expect("rectangle definition is not axis aligned"),
@@ -407,6 +414,7 @@ impl Scene for CornellBoxScene {
             RectangleXZ::new(
                 Vec3::new(213.0, 554.0, 227.0),
                 Vec3::new(343.0, 554.0, 332.0),
+                -1.0,
                 material_light,
             )
             .expect("rectangle definition is not axis aligned"),
@@ -416,6 +424,7 @@ impl Scene for CornellBoxScene {
             RectangleXY::new(
                 Vec3::new(0.0, 0.0, 555.0),
                 Vec3::new(555.0, 555.0, 555.0),
+                -1.0,
                 material_white.clone(),
             )
             .expect("rectangle definition is not axis aligned"),
@@ -441,6 +450,136 @@ impl Scene for CornellBoxScene {
             Vec3::new(347.5, 420.0, 377.5),
             90.0,
             material_glass,
+        )));
+
+        BvhNode::new(world)
+    }
+}
+
+pub struct TriangleTestScene;
+
+impl Scene for TriangleTestScene {
+    fn get_output_settings(&self) -> OutputSettings {
+        OutputSettings::StaticImage {
+            image_settings: ImageSettings {
+                width: 400,
+                height: 400,
+                samples_per_pixel: 1000,
+                max_bounces: 20,
+                background: Color::new(0.0, 0.0, 0.0),
+            },
+        }
+    }
+
+    fn get_camera_at(&self, _: f64) -> Camera {
+        let lookfrom = Vec3::new(278.0, 278.0, -800.0);
+        let lookat = Vec3::new(278.0, 278.0, 0.0);
+        let up = Vec3::new(0.0, 1.0, 0.0);
+        let focus_dist = 10.0;
+        let aperture = 0.0;
+        let aspect_ratio = match self.get_output_settings() {
+            OutputSettings::StaticImage { image_settings } => {
+                image_settings.width as f64 / image_settings.height as f64
+            }
+            _ => unimplemented!(),
+        };
+
+        Camera::new(
+            lookfrom,
+            lookat,
+            up,
+            40.0,
+            aspect_ratio,
+            aperture,
+            focus_dist,
+        )
+    }
+
+    fn get_world(&self) -> BvhNode {
+        let mut world: Vec<Box<dyn Hittable>> = vec![];
+
+        let material_red = Arc::new(LambertianMaterial::new_from_color(Color::new(
+            0.65, 0.05, 0.05,
+        )));
+        let material_white = Arc::new(LambertianMaterial::new_from_color(Color::new(
+            0.73, 0.73, 0.73,
+        )));
+        let material_green = Arc::new(LambertianMaterial::new_from_color(Color::new(
+            0.12, 0.45, 0.15,
+        )));
+        let material_light = Arc::new(DiffuseLightMaterial::new_from_color(Color::new(
+            15.0, 15.0, 15.0,
+        )));
+        let material_glass = Arc::new(DielectricMaterial::new(1.5));
+
+        world.push(Box::new(
+            RectangleYZ::new(
+                Vec3::new(555.0, 0.0, 0.0),
+                Vec3::new(555.0, 555.0, 555.0),
+                -1.0,
+                material_green,
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+        world.push(Box::new(
+            RectangleYZ::new(
+                Vec3::new(0.0, 0.0, 0.0),
+                Vec3::new(0.0, 555.0, 555.0),
+                1.0,
+                material_red,
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+
+        world.push(Box::new(
+            RectangleXZ::new(
+                Vec3::new(0.0, 555.0, 0.0),
+                Vec3::new(555.0, 555.0, 555.0),
+                -1.0,
+                material_white.clone(),
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+        world.push(Box::new(
+            RectangleXZ::new(
+                Vec3::new(0.0, 0.0, 0.0),
+                Vec3::new(555.0, 0.0, 555.0),
+                1.0,
+                material_white.clone(),
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+        world.push(Box::new(
+            RectangleXZ::new(
+                Vec3::new(213.0, 554.0, 227.0),
+                Vec3::new(343.0, 554.0, 332.0),
+                -1.0,
+                material_light,
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+
+        world.push(Box::new(
+            RectangleXY::new(
+                Vec3::new(0.0, 0.0, 555.0),
+                Vec3::new(555.0, 555.0, 555.0),
+                -1.0,
+                material_white.clone(),
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+
+        world.push(Box::new(Triangle::new_without_normal(
+            Vec3::new(200.0, 100.0, 100.0),
+            Vec3::new(300.0, 300.0, 500.0),
+            Vec3::new(400.0, 100.0, 100.0),
+            material_glass,
+        )));
+        world.push(Box::new(Triangle::new_without_normal(
+            Vec3::new(100.0, 300.0, 100.0),
+            Vec3::new(150.0, 400.0, 250.0),
+            Vec3::new(100.0, 300.0, 400.0),
+            material_white,
         )));
 
         BvhNode::new(world)

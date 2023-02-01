@@ -16,7 +16,7 @@ pub trait Material: Sync + Send {
     fn scatter(&self, _ray_in: &Ray, _hit_record: &HitRecord) -> Option<Scatter> {
         None
     }
-    fn emits(&self, _u: f64, _v: f64, _point: Vec3) -> Color {
+    fn emits(&self, _ray_in: &Ray, _hit_record: &HitRecord) -> Color {
         Color::default()
     }
 }
@@ -42,6 +42,7 @@ impl Material for LambertianMaterial {
         let mut scatter_direction = hit_record.normal + Vec3::random_on_unitsphere();
 
         if scatter_direction.near_zero() {
+            println!("Near zero");
             scatter_direction = hit_record.normal;
         }
 
@@ -150,7 +151,12 @@ impl DiffuseLightMaterial {
 }
 
 impl Material for DiffuseLightMaterial {
-    fn emits(&self, u: f64, v: f64, point: Vec3) -> Color {
-        self.emit.value(u, v, point)
+    fn emits(&self, ray_in: &Ray, hit_record: &HitRecord) -> Color {
+        if hit_record.front_face {
+            self.emit
+                .value(hit_record.u, hit_record.v, hit_record.point)
+        } else {
+            Color::default()
+        }
     }
 }

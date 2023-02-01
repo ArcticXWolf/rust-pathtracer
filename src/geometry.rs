@@ -179,6 +179,7 @@ impl fmt::Display for RectangleNotAxisAlignedError {
 pub struct RectangleXY {
     start: Vec3,
     end: Vec3,
+    direction: f64,
     material: Arc<dyn Material>,
 }
 
@@ -186,6 +187,7 @@ impl RectangleXY {
     pub fn new(
         start: Vec3,
         end: Vec3,
+        direction: f64,
         material: Arc<dyn Material>,
     ) -> Result<Self, RectangleNotAxisAlignedError> {
         if start.z() != end.z() {
@@ -194,6 +196,7 @@ impl RectangleXY {
         Ok(Self {
             start: Vec3::new(start.x().min(end.x()), start.y().min(end.y()), start.z()),
             end: Vec3::new(start.x().max(end.x()), start.y().max(end.y()), start.z()),
+            direction: direction.signum(),
             material,
         })
     }
@@ -217,7 +220,7 @@ impl Hittable for RectangleXY {
             t,
             ray.at(t),
             ray,
-            Vec3::new(0.0, 0.0, 1.0),
+            Vec3::new(0.0, 0.0, self.direction),
             (x - self.start.x()) / (self.end.x() - self.start.x()),
             (y - self.start.y()) / (self.end.y() - self.start.y()),
             &*self.material,
@@ -239,6 +242,7 @@ impl Hittable for RectangleXY {
 pub struct RectangleXZ {
     start: Vec3,
     end: Vec3,
+    direction: f64,
     material: Arc<dyn Material>,
 }
 
@@ -246,6 +250,7 @@ impl RectangleXZ {
     pub fn new(
         start: Vec3,
         end: Vec3,
+        direction: f64,
         material: Arc<dyn Material>,
     ) -> Result<Self, RectangleNotAxisAlignedError> {
         if start.y() != end.y() {
@@ -254,6 +259,7 @@ impl RectangleXZ {
         Ok(Self {
             start: Vec3::new(start.x().min(end.x()), start.y(), start.z().min(end.z())),
             end: Vec3::new(start.x().max(end.x()), start.y(), start.z().max(end.z())),
+            direction: direction.signum(),
             material,
         })
     }
@@ -277,7 +283,7 @@ impl Hittable for RectangleXZ {
             t,
             ray.at(t),
             ray,
-            Vec3::new(0.0, 1.0, 0.0),
+            Vec3::new(0.0, self.direction, 0.0),
             (x - self.start.x()) / (self.end.x() - self.start.x()),
             (z - self.start.z()) / (self.end.z() - self.start.z()),
             &*self.material,
@@ -299,6 +305,7 @@ impl Hittable for RectangleXZ {
 pub struct RectangleYZ {
     start: Vec3,
     end: Vec3,
+    direction: f64,
     material: Arc<dyn Material>,
 }
 
@@ -306,6 +313,7 @@ impl RectangleYZ {
     pub fn new(
         start: Vec3,
         end: Vec3,
+        direction: f64,
         material: Arc<dyn Material>,
     ) -> Result<Self, RectangleNotAxisAlignedError> {
         if start.x() != end.x() {
@@ -314,6 +322,7 @@ impl RectangleYZ {
         Ok(Self {
             start: Vec3::new(start.x(), start.y().min(end.y()), start.z().min(end.z())),
             end: Vec3::new(start.x(), start.y().max(end.y()), start.z().max(end.z())),
+            direction: direction.signum(),
             material,
         })
     }
@@ -337,7 +346,7 @@ impl Hittable for RectangleYZ {
             t,
             ray.at(t),
             ray,
-            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(self.direction, 0.0, 0.0),
             (y - self.start.y()) / (self.end.y() - self.start.y()),
             (z - self.start.z()) / (self.end.z() - self.start.z()),
             &*self.material,
@@ -380,6 +389,7 @@ impl AABox {
                 RectangleXY::new(
                     Vec3::new(minimum.x(), minimum.y(), minimum.z()),
                     Vec3::new(maximum.x(), maximum.y(), minimum.z()),
+                    -1.0,
                     material.clone(),
                 )
                 .expect("rectangle definition is not axis aligned"),
@@ -388,6 +398,7 @@ impl AABox {
                 RectangleXY::new(
                     Vec3::new(minimum.x(), minimum.y(), maximum.z()),
                     Vec3::new(maximum.x(), maximum.y(), maximum.z()),
+                    1.0,
                     material.clone(),
                 )
                 .expect("rectangle definition is not axis aligned"),
@@ -396,6 +407,7 @@ impl AABox {
                 RectangleXZ::new(
                     Vec3::new(minimum.x(), minimum.y(), minimum.z()),
                     Vec3::new(maximum.x(), minimum.y(), maximum.z()),
+                    -1.0,
                     material.clone(),
                 )
                 .expect("rectangle definition is not axis aligned"),
@@ -404,6 +416,7 @@ impl AABox {
                 RectangleXZ::new(
                     Vec3::new(minimum.x(), maximum.y(), minimum.z()),
                     Vec3::new(maximum.x(), maximum.y(), maximum.z()),
+                    1.0,
                     material.clone(),
                 )
                 .expect("rectangle definition is not axis aligned"),
@@ -412,6 +425,7 @@ impl AABox {
                 RectangleYZ::new(
                     Vec3::new(minimum.x(), minimum.y(), minimum.z()),
                     Vec3::new(minimum.x(), maximum.y(), maximum.z()),
+                    -1.0,
                     material.clone(),
                 )
                 .expect("rectangle definition is not axis aligned"),
@@ -420,6 +434,7 @@ impl AABox {
                 RectangleYZ::new(
                     Vec3::new(maximum.x(), minimum.y(), minimum.z()),
                     Vec3::new(maximum.x(), maximum.y(), maximum.z()),
+                    1.0,
                     material,
                 )
                 .expect("rectangle definition is not axis aligned"),
@@ -441,5 +456,120 @@ impl Hittable for AABox {
 
     fn bounding_box(&self) -> Aabb {
         Aabb::new(self.minimum, self.maximum)
+    }
+}
+
+#[derive(Clone)]
+pub struct Triangle {
+    point1: Vec3,
+    point2: Vec3,
+    point3: Vec3,
+    normal: Vec3,
+    material: Arc<dyn Material>,
+}
+
+impl Triangle {
+    pub fn new(
+        point1: Vec3,
+        point2: Vec3,
+        point3: Vec3,
+        normal: Vec3,
+        material: Arc<dyn Material>,
+    ) -> Self {
+        Self {
+            point1,
+            point2,
+            point3,
+            normal,
+            material,
+        }
+    }
+
+    pub fn new_without_normal(
+        point1: Vec3,
+        point2: Vec3,
+        point3: Vec3,
+        material: Arc<dyn Material>,
+    ) -> Self {
+        Self {
+            point1,
+            point2,
+            point3,
+            normal: (point2 - point1).cross(point3 - point1).unit_vector(),
+            material,
+        }
+    }
+}
+
+impl Hittable for Triangle {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        // Adapted from https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
+        let v0v1 = self.point2 - self.point1;
+        let v0v2 = self.point3 - self.point1;
+        let pvec = ray.direction.cross(v0v2);
+        let det = v0v1.dot(pvec);
+
+        if det < 0.0001 {
+            return None;
+        }
+        let inv_det = 1.0 / det;
+
+        let tvec = ray.origin - self.point1;
+        let u = tvec.dot(pvec) * inv_det;
+        if !(0.0..=1.0).contains(&u) {
+            return None;
+        }
+
+        let qvec = tvec.cross(v0v1);
+        let v = ray.direction.dot(qvec) * inv_det;
+        if v < 0.0 || u + v > 1.0 {
+            return None;
+        }
+
+        let t = v0v2.dot(qvec) * inv_det;
+        if !(t_min..=t_max).contains(&t) {
+            return None;
+        }
+
+        let p = ray.at(t);
+
+        Some(HitRecord::new(
+            t,
+            p,
+            ray,
+            self.normal,
+            0.0,
+            0.0,
+            &*self.material,
+        ))
+    }
+
+    fn bounding_box(&self) -> Aabb {
+        let mut minimum = Vec3::new(
+            self.point1.x().min(self.point2.x()).min(self.point3.x()),
+            self.point1.y().min(self.point2.y()).min(self.point3.y()),
+            self.point1.z().min(self.point2.z()).min(self.point3.z()),
+        );
+        let mut maximum = Vec3::new(
+            self.point1.x().max(self.point2.x()).max(self.point3.x()),
+            self.point1.y().max(self.point2.y()).max(self.point3.y()),
+            self.point1.z().max(self.point2.z()).max(self.point3.z()),
+        );
+
+        // In theory this bounding box is infinitly thin, but we pad it a bit.
+        if minimum.x() == maximum.x() {
+            minimum += Vec3::new(-0.001, 0.0, 0.0);
+            maximum += Vec3::new(0.001, 0.0, 0.0);
+        }
+        if minimum.y() == maximum.y() {
+            minimum += Vec3::new(0.0, -0.001, 0.0);
+            maximum += Vec3::new(0.0, 0.001, 0.0);
+        }
+        if minimum.z() == maximum.z() {
+            minimum += Vec3::new(0.0, 0.0, -0.001);
+            maximum += Vec3::new(0.0, 0.0, 0.001);
+        }
+
+        Aabb::new(minimum, maximum)
     }
 }

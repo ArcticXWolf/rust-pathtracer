@@ -23,9 +23,7 @@ impl Ray {
         }
 
         if let Some(hit_record) = hittable.hit(self, 0.001, f64::INFINITY) {
-            let emitted = hit_record
-                .material
-                .emits(hit_record.u, hit_record.v, hit_record.point);
+            let emitted = hit_record.material.emits(self, &hit_record);
 
             if let Some(scatter) = hit_record.material.scatter(self, &hit_record) {
                 return emitted
