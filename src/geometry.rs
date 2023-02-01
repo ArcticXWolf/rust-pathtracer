@@ -1,4 +1,8 @@
-use std::{fmt, ops::Neg, sync::Arc};
+use std::{
+    fmt::{self, Display},
+    ops::Neg,
+    sync::Arc,
+};
 
 use crate::{bvh::Aabb, material::Material, ray::Ray, vec3::Vec3};
 
@@ -466,6 +470,16 @@ pub struct Triangle {
     point3: Vec3,
     normal: Vec3,
     material: Arc<dyn Material>,
+}
+
+impl Display for Triangle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "V[{:?}, {:?}, {:?}]",
+            self.point1, self.point2, self.point3
+        )
+    }
 }
 
 impl Triangle {

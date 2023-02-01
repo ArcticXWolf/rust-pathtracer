@@ -1,4 +1,8 @@
-use std::{ops::Neg, sync::Arc};
+use std::{
+    ops::Neg,
+    path::{self, Path},
+    sync::Arc,
+};
 
 use crate::{
     bvh::BvhNode,
@@ -7,6 +11,7 @@ use crate::{
     material::{
         DielectricMaterial, DiffuseLightMaterial, LambertianMaterial, Material, MetalMaterial,
     },
+    obj_model::ObjModel,
     texture::{CheckerTexture, PerlinNoiseTexture, SolidColorTexture},
     vec3::{Color, Vec3},
 };
@@ -118,7 +123,7 @@ impl Scene for SphereFieldScene {
                     x if x < 0.8 => {
                         let albedo = Color::random_range(0.5, 1.0);
                         let fuzz = rand::random::<f64>();
-                        (Arc::new(MetalMaterial::new(albedo, fuzz)), false)
+                        (Arc::new(MetalMaterial::new_from_color(albedo, fuzz)), false)
                     }
                     _ => (Arc::new(DielectricMaterial::new(1.5)), true),
                 };
@@ -151,7 +156,10 @@ impl Scene for SphereFieldScene {
             material_big2,
         )));
 
-        let material_big3 = Arc::new(MetalMaterial::new(Color::new(0.7, 0.6, 0.5), 0.0));
+        let material_big3 = Arc::new(MetalMaterial::new_from_color(
+            Color::new(0.7, 0.6, 0.5),
+            0.0,
+        ));
         world.push(Box::new(Sphere::new(
             Vec3::new(0.0, 1.0, 0.0),
             1.0,
@@ -581,6 +589,69 @@ impl Scene for TriangleTestScene {
             Vec3::new(100.0, 300.0, 400.0),
             material_white,
         )));
+
+        BvhNode::new(world)
+    }
+}
+
+pub struct ModelTestScene {
+    pub path_str: String,
+}
+
+impl Scene for ModelTestScene {
+    fn get_output_settings(&self) -> OutputSettings {
+        OutputSettings::StaticImage {
+            image_settings: ImageSettings {
+                width: 800,
+                height: 800,
+                samples_per_pixel: 250,
+                max_bounces: 20,
+                background: Color::new(1.0, 1.0, 1.0),
+            },
+        }
+    }
+
+    fn get_camera_at(&self, _: f64) -> Camera {
+        let lookfrom = Vec3::new(0.0, 2.5, -7.0);
+        let lookat = Vec3::new(0.0, 1.5, 0.0);
+        let up = Vec3::new(0.0, 1.0, 0.0);
+        let focus_dist = 10.0;
+        let aperture = 0.0;
+        let aspect_ratio = match self.get_output_settings() {
+            OutputSettings::StaticImage { image_settings } => {
+                image_settings.width as f64 / image_settings.height as f64
+            }
+            _ => unimplemented!(),
+        };
+
+        Camera::new(
+            lookfrom,
+            lookat,
+            up,
+            60.0,
+            aspect_ratio,
+            aperture,
+            focus_dist,
+        )
+    }
+
+    fn get_world(&self) -> BvhNode {
+        let mut world: Vec<Box<dyn Hittable>> = vec![];
+
+        let checker_texture = CheckerTexture::new(
+            Box::new(SolidColorTexture::new(Color::new(0.2, 0.3, 0.1))),
+            Box::new(SolidColorTexture::new(Color::new(0.9, 0.9, 0.9))),
+        );
+        let material_ground = Arc::new(LambertianMaterial::new(Box::new(checker_texture)));
+        world.push(Box::new(Sphere::new(
+            Vec3::new(0.0, -1000.0, 0.0),
+            1000.0,
+            material_ground,
+        )));
+
+        world.push(Box::new(ObjModel::new_from_path(path::Path::new(
+            self.path_str.as_str(),
+        ))));
 
         BvhNode::new(world)
     }

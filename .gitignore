@@ -1,4 +1,5 @@
 /target
 /output/*
 !output/.keep
+*.obj
 image.png

@@ -4,7 +4,7 @@ mod bvh;
 mod camera;
 mod geometry;
 mod material;
-//mod obj_model;
+mod obj_model;
 mod ray;
 mod renderer;
 mod scene;
@@ -17,7 +17,9 @@ use scene::Scene;
 use scene::*;
 
 fn main() {
-    let scene: Box<dyn Scene> = Box::new(TriangleTestScene {});
+    let scene: Box<dyn Scene> = Box::new(ModelTestScene {
+        path_str: String::from("./model.obj"),
+    });
     let world = scene.get_world();
     let settings = scene.get_output_settings();
     let amount_of_frames = match settings {

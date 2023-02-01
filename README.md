@@ -5,6 +5,7 @@ This is my attempt at a path tracer.
 ![Light test with a marble sphere and a rectangular lightsource](https://raw.githubusercontent.com/ArcticXWolf/rust-pathtracer/master/preview/LightTest.png)
 ![Two spheres with checkered textures](https://raw.githubusercontent.com/ArcticXWolf/rust-pathtracer/master/preview/TwoSpheres.png)
 ![Cornell box](https://raw.githubusercontent.com/ArcticXWolf/rust-pathtracer/master/preview/CornellBox.png)
+![Model support test](https://raw.githubusercontent.com/ArcticXWolf/rust-pathtracer/master/preview/ModelTest.png)
 ![Spinning animation of a field of spheres](https://raw.githubusercontent.com/ArcticXWolf/rust-pathtracer/master/preview/SphereField.gif)
 
 This is a follow along to the great book [Ray Tracing in One Weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html) ported to Rust.

@@ -56,13 +56,20 @@ impl Material for LambertianMaterial {
 }
 
 pub struct MetalMaterial {
-    pub albedo: Color,
+    pub albedo: Box<dyn Texture>,
     pub fuzz: f64,
 }
 
 impl MetalMaterial {
-    pub fn new(albedo: Color, fuzz: f64) -> Self {
+    pub fn new(albedo: Box<dyn Texture>, fuzz: f64) -> Self {
         Self { albedo, fuzz }
+    }
+
+    pub fn new_from_color(albedo: Color, fuzz: f64) -> Self {
+        Self {
+            albedo: Box::new(SolidColorTexture::new(albedo)),
+            fuzz,
+        }
     }
 }
 
@@ -76,7 +83,9 @@ impl Material for MetalMaterial {
                     hit_record.point,
                     reflected_direction + self.fuzz * Vec3::random_in_unitsphere(),
                 ),
-                attenuation: self.albedo,
+                attenuation: self
+                    .albedo
+                    .value(hit_record.u, hit_record.v, hit_record.point),
             })
         } else {
             None
@@ -139,10 +148,6 @@ pub struct DiffuseLightMaterial {
 }
 
 impl DiffuseLightMaterial {
-    pub fn new(emit: Box<dyn Texture>) -> Self {
-        Self { emit }
-    }
-
     pub fn new_from_color(color: Color) -> Self {
         Self {
             emit: Box::new(SolidColorTexture::new(color)),
@@ -151,7 +156,7 @@ impl DiffuseLightMaterial {
 }
 
 impl Material for DiffuseLightMaterial {
-    fn emits(&self, ray_in: &Ray, hit_record: &HitRecord) -> Color {
+    fn emits(&self, _: &Ray, hit_record: &HitRecord) -> Color {
         if hit_record.front_face {
             self.emit
                 .value(hit_record.u, hit_record.v, hit_record.point)

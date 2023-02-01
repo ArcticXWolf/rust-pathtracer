@@ -6,8 +6,8 @@ use crate::{geometry::Hittable, ray::Ray, vec3::Vec3};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Aabb {
-    minimum: Vec3,
-    maximum: Vec3,
+    pub minimum: Vec3,
+    pub maximum: Vec3,
 }
 
 impl Aabb {
