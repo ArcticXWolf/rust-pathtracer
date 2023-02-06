@@ -13,6 +13,7 @@ use crate::{
     },
     obj_model::ObjModel,
     texture::{CheckerTexture, PerlinNoiseTexture, SolidColorTexture},
+    transformation::Matrix4x4,
     vec3::{Color, Vec3},
 };
 
@@ -602,18 +603,18 @@ impl Scene for ModelTestScene {
     fn get_output_settings(&self) -> OutputSettings {
         OutputSettings::StaticImage {
             image_settings: ImageSettings {
-                width: 800,
-                height: 800,
-                samples_per_pixel: 250,
+                width: 400,
+                height: 400,
+                samples_per_pixel: 2000,
                 max_bounces: 20,
-                background: Color::new(1.0, 1.0, 1.0),
+                background: Color::new(0.0, 0.0, 0.0),
             },
         }
     }
 
     fn get_camera_at(&self, _: f64) -> Camera {
-        let lookfrom = Vec3::new(0.0, 2.5, -7.0);
-        let lookat = Vec3::new(0.0, 1.5, 0.0);
+        let lookfrom = Vec3::new(278.0, 278.0, -800.0);
+        let lookat = Vec3::new(278.0, 278.0, 0.0);
         let up = Vec3::new(0.0, 1.0, 0.0);
         let focus_dist = 10.0;
         let aperture = 0.0;
@@ -628,7 +629,7 @@ impl Scene for ModelTestScene {
             lookfrom,
             lookat,
             up,
-            60.0,
+            40.0,
             aspect_ratio,
             aperture,
             focus_dist,
@@ -638,20 +639,86 @@ impl Scene for ModelTestScene {
     fn get_world(&self) -> BvhNode {
         let mut world: Vec<Box<dyn Hittable>> = vec![];
 
-        let checker_texture = CheckerTexture::new(
-            Box::new(SolidColorTexture::new(Color::new(0.2, 0.3, 0.1))),
-            Box::new(SolidColorTexture::new(Color::new(0.9, 0.9, 0.9))),
-        );
-        let material_ground = Arc::new(LambertianMaterial::new(Box::new(checker_texture)));
-        world.push(Box::new(Sphere::new(
-            Vec3::new(0.0, -1000.0, 0.0),
-            1000.0,
-            material_ground,
+        let material_red = Arc::new(LambertianMaterial::new_from_color(Color::new(
+            0.65, 0.05, 0.05,
+        )));
+        let material_white = Arc::new(LambertianMaterial::new_from_color(Color::new(
+            0.73, 0.73, 0.73,
+        )));
+        let material_green = Arc::new(LambertianMaterial::new_from_color(Color::new(
+            0.12, 0.45, 0.15,
+        )));
+        let material_light = Arc::new(DiffuseLightMaterial::new_from_color(Color::new(
+            15.0, 15.0, 15.0,
         )));
 
-        world.push(Box::new(ObjModel::new_from_path(path::Path::new(
-            self.path_str.as_str(),
-        ))));
+        world.push(Box::new(
+            RectangleYZ::new(
+                Vec3::new(555.0, 0.0, 0.0),
+                Vec3::new(555.0, 555.0, 555.0),
+                -1.0,
+                material_green,
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+        world.push(Box::new(
+            RectangleYZ::new(
+                Vec3::new(0.0, 0.0, 0.0),
+                Vec3::new(0.0, 555.0, 555.0),
+                1.0,
+                material_red,
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+
+        world.push(Box::new(
+            RectangleXZ::new(
+                Vec3::new(0.0, 555.0, 0.0),
+                Vec3::new(555.0, 555.0, 555.0),
+                -1.0,
+                material_white.clone(),
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+        world.push(Box::new(
+            RectangleXZ::new(
+                Vec3::new(0.0, 0.0, 0.0),
+                Vec3::new(555.0, 0.0, 555.0),
+                1.0,
+                material_white.clone(),
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+        world.push(Box::new(
+            RectangleXZ::new(
+                Vec3::new(163.0, 554.0, 197.0),
+                Vec3::new(393.0, 554.0, 362.0),
+                -1.0,
+                material_light,
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+
+        world.push(Box::new(
+            RectangleXY::new(
+                Vec3::new(0.0, 0.0, 555.0),
+                Vec3::new(555.0, 555.0, 555.0),
+                -1.0,
+                material_white.clone(),
+            )
+            .expect("rectangle definition is not axis aligned"),
+        ));
+
+        let material_glass = Arc::new(DielectricMaterial::new(1.5));
+        let tl = Matrix4x4::new_translation_matrix(Vec3::new(230.0, 100.0, 350.0));
+        let ts = Matrix4x4::new_scale_matrix_all_directions(100.0);
+        let tr = Matrix4x4::new_rotation_y_matrix(180.0_f64.to_radians());
+        let transformation_matrix = tl * ts * tr;
+        world.push(Box::new(ObjModel::new_from_path(
+            path::Path::new(self.path_str.as_str()),
+            Some(material_glass),
+            Some(transformation_matrix),
+        )));
 
         BvhNode::new(world)
     }

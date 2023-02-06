@@ -12,3 +12,6 @@ This is a follow along to the great book [Ray Tracing in One Weekend](https://ra
 
 Credits also to
 * [perliedman/raytraycing-in-one-weekend](https://github.com/perliedman/raytracing-in-one-weekend)
+* [Utah Teapot](https://s2020.siggraph.org/3d-model-portal/)
+* [Stanford Test Models](https://graphics.stanford.edu/data/3Dscanrep/)
+* [Morgan McGuire, Computer Graphics Archive, July 2017](https://casual-effects.com/data)

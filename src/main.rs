@@ -5,20 +5,26 @@ mod camera;
 mod geometry;
 mod material;
 mod obj_model;
+mod parser;
 mod ray;
 mod renderer;
 mod scene;
 mod texture;
+mod transformation;
 mod vec3;
 
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
+use parser::parse_pbrt_file;
 use scene::Scene;
 use scene::*;
 
 fn main() {
+    let pbrt_file = Path::new("./assets/pbrt_test.pbrt");
+    parse_pbrt_file(pbrt_file);
+
     let scene: Box<dyn Scene> = Box::new(ModelTestScene {
-        path_str: String::from("./model.obj"),
+        path_str: String::from("./assets/bunny.obj"),
     });
     let world = scene.get_world();
     let settings = scene.get_output_settings();

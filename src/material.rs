@@ -39,7 +39,7 @@ impl LambertianMaterial {
 
 impl Material for LambertianMaterial {
     fn scatter(&self, _: &Ray, hit_record: &HitRecord) -> Option<Scatter> {
-        let mut scatter_direction = hit_record.normal + Vec3::random_on_unitsphere();
+        let mut scatter_direction = hit_record.normal.unit_vector() + Vec3::random_on_unitsphere();
 
         if scatter_direction.near_zero() {
             println!("Near zero");
@@ -75,7 +75,10 @@ impl MetalMaterial {
 
 impl Material for MetalMaterial {
     fn scatter(&self, ray_in: &Ray, hit_record: &HitRecord) -> Option<Scatter> {
-        let reflected_direction = ray_in.direction.unit_vector().reflect(hit_record.normal);
+        let reflected_direction = ray_in
+            .direction
+            .unit_vector()
+            .reflect(hit_record.normal.unit_vector());
 
         if reflected_direction.dot(hit_record.normal) > 0.0 {
             Some(Scatter {
@@ -123,7 +126,10 @@ impl Material for DielectricMaterial {
 
         let unit_direction = ray_in.direction.unit_vector();
 
-        let cos_theta = unit_direction.neg().dot(hit_record.normal).min(1.0);
+        let cos_theta = unit_direction
+            .neg()
+            .dot(hit_record.normal.unit_vector())
+            .min(1.0);
         let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
 
         let mut direction = unit_direction;
@@ -131,9 +137,9 @@ impl Material for DielectricMaterial {
             || (DielectricMaterial::reflectance(cos_theta, refraction_ratio)
                 > rand::random::<f64>())
         {
-            direction = direction.reflect(hit_record.normal);
+            direction = direction.reflect(hit_record.normal.unit_vector());
         } else {
-            direction = direction.refract(hit_record.normal, refraction_ratio);
+            direction = direction.refract(hit_record.normal.unit_vector(), refraction_ratio);
         }
 
         Some(Scatter {

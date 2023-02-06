@@ -5,6 +5,7 @@ use crate::{
     geometry::{HitRecord, Hittable, Triangle},
     material::{DielectricMaterial, LambertianMaterial, Material, MetalMaterial},
     ray::Ray,
+    transformation::Matrix4x4,
     vec3::{Color, Vec3},
 };
 
@@ -16,7 +17,11 @@ pub struct ObjModel {
 }
 
 impl ObjModel {
-    pub fn new_from_path(path: &Path) -> Self {
+    pub fn new_from_path(
+        path: &Path,
+        override_material: Option<Arc<dyn Material>>,
+        transformation_matrix: Option<Matrix4x4>,
+    ) -> Self {
         let load_options = tobj::LoadOptions {
             single_index: false,
             ignore_lines: true,
@@ -59,7 +64,7 @@ impl ObjModel {
                     mesh.indices[triangle_index * 3 + 1] as usize,
                     mesh.indices[triangle_index * 3 + 2] as usize,
                 );
-                let (vertex0, vertex1, vertex2) = (
+                let (mut vertex0, mut vertex1, mut vertex2) = (
                     Vec3::new(
                         mesh.positions[vertex_index0 * 3].into(),
                         mesh.positions[vertex_index0 * 3 + 1].into(),
@@ -77,11 +82,21 @@ impl ObjModel {
                     ),
                 );
 
-                let material = match mesh.material_id {
-                    Some(i) => materials_mapped[i].clone(),
-                    None => Arc::new(LambertianMaterial::new_from_color(Color::new(
-                        0.2, 0.7, 0.2,
-                    ))),
+                if let Some(tm) = transformation_matrix {
+                    vertex0 = tm * vertex0;
+                    vertex1 = tm * vertex1;
+                    vertex2 = tm * vertex2;
+                }
+
+                let material = if let Some(ref om) = override_material {
+                    om.clone()
+                } else {
+                    match mesh.material_id {
+                        Some(i) => materials_mapped[i].clone(),
+                        None => Arc::new(LambertianMaterial::new_from_color(Color::new(
+                            0.2, 0.7, 0.2,
+                        ))),
+                    }
                 };
 
                 let triangle = if mesh.normals.is_empty() {
@@ -102,6 +117,12 @@ impl ObjModel {
         let bb = world.bounding_box();
         let minimum = bb.minimum;
         let maximum = bb.maximum;
+        println!(
+            "Model {} rendered from {:?} to {:?}",
+            path.display(),
+            minimum,
+            maximum
+        );
 
         Self {
             triangles: BvhNode::new(world),
