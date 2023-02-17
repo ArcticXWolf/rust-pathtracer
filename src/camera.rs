@@ -1,7 +1,15 @@
 use crate::{ray::Ray, vec3::Vec3};
 
+#[derive(Debug, Clone)]
 pub struct Camera {
-    origin: Vec3,
+    pub lookfrom: Vec3,
+    pub lookat: Vec3,
+    pub up: Vec3,
+    pub vertical_fov: f64,
+    pub aspect_ratio: f64,
+    pub aperture: f64,
+    pub focus_dist: f64,
+
     lower_left_corner: Vec3,
     horizontal: Vec3,
     vertical: Vec3,
@@ -20,27 +28,37 @@ impl Camera {
         aperture: f64,
         focus_dist: f64,
     ) -> Self {
-        let h = (vertical_fov.to_radians() / 2.0).tan();
-        let viewport = (aspect_ratio * 2.0 * h, 2.0 * h);
+        let mut camera = Self {
+            lookfrom,
+            lookat,
+            up,
+            vertical_fov,
+            aspect_ratio,
+            aperture,
+            focus_dist,
+            lower_left_corner: Vec3::default(),
+            horizontal: Vec3::default(),
+            vertical: Vec3::default(),
+            u: Vec3::default(),
+            v: Vec3::default(),
+            lens_radius: 0.0,
+        };
+        camera.recalculate();
+        camera
+    }
 
-        let w = (lookfrom - lookat).unit_vector();
-        let u = up.cross(w).unit_vector();
-        let v = w.cross(u);
+    pub fn recalculate(&mut self) {
+        let h = (self.vertical_fov.to_radians() / 2.0).tan();
+        let viewport = (self.aspect_ratio * 2.0 * h, 2.0 * h);
 
-        let origin = lookfrom;
-        let horizontal = focus_dist * viewport.0 * u;
-        let vertical = focus_dist * viewport.1 * v;
-        let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - focus_dist * w;
+        let w = (self.lookfrom - self.lookat).unit_vector();
+        self.u = self.up.cross(w).unit_vector();
+        self.v = w.cross(self.u);
 
-        Self {
-            origin,
-            lower_left_corner,
-            horizontal,
-            vertical,
-            u,
-            v,
-            lens_radius: aperture / 2.0,
-        }
+        self.horizontal = self.focus_dist * viewport.0 * self.u;
+        self.vertical = self.focus_dist * viewport.1 * self.v;
+        self.lower_left_corner =
+            self.lookfrom - self.horizontal / 2.0 - self.vertical / 2.0 - self.focus_dist * w;
     }
 
     pub fn ray_at(&self, s: f64, t: f64) -> Ray {
@@ -48,10 +66,24 @@ impl Camera {
         let blur_offset = self.u * rng.x() + self.v * rng.y();
 
         Ray::new(
-            self.origin + blur_offset,
+            self.lookfrom + blur_offset,
             self.lower_left_corner + s * self.horizontal + t * self.vertical
-                - self.origin
+                - self.lookfrom
                 - blur_offset,
+        )
+    }
+}
+
+impl Default for Camera {
+    fn default() -> Self {
+        Self::new(
+            Vec3::default(),
+            Vec3::new(0.0, 0.0, -1.0),
+            Vec3::new(0.0, 1.0, 0.0),
+            40.0,
+            16.0 / 9.0,
+            0.0,
+            10.0,
         )
     }
 }

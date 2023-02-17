@@ -1,3 +1,4 @@
+use std::io::Read;
 use std::{fs::File, io::BufWriter, path::Path};
 
 mod bvh;
@@ -11,21 +12,19 @@ mod renderer;
 mod scene;
 mod texture;
 mod transformation;
+mod vec2;
 mod vec3;
 
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
-use parser::parse_pbrt_file;
+use parser::parse;
 use scene::Scene;
 use scene::*;
 
 fn main() {
     let pbrt_file = Path::new("./assets/pbrt_test.pbrt");
-    parse_pbrt_file(pbrt_file);
 
-    let scene: Box<dyn Scene> = Box::new(ModelTestScene {
-        path_str: String::from("./assets/bunny.obj"),
-    });
+    let scene: Box<dyn Scene> = Box::new(PbrtScene::new_from_file(pbrt_file));
     let world = scene.get_world();
     let settings = scene.get_output_settings();
     let amount_of_frames = match settings {
